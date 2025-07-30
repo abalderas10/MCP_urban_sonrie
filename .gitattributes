@@ -1,0 +1,16 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# JS and TS files must always use LF for tools to work
+*.js text eol=lf
+*.ts text eol=lf
+*.jsx text eol=lf
+*.tsx text eol=lf
+*.json text eol=lf
+
+# Exclude npm package lock from GitHub language stats
+package-lock.json linguist-generated=true
+yarn.lock linguist-generated=true
+
+# Exclude .env.example from GitHub language stats
+.env.example linguist-generated=true
