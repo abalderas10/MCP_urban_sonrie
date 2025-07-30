@@ -128,25 +128,61 @@ En este caso, utilizamos MCP para permitir que los agentes conversacionales de E
 }
 ```
 
+## Sistema de Logs
+
+El servidor MCP incluye un sistema de logs persistente que registra todas las interacciones y llamadas a herramientas. Esto facilita la depuración y el seguimiento de las comunicaciones entre ElevenLabs y Cal.com.
+
+### Estructura de los logs
+
+Cada interacción con el servidor MCP genera entradas de log que incluyen:
+
+- **Solicitudes MCP**: Registra todas las solicitudes entrantes al servidor MCP
+- **Respuestas MCP**: Registra todas las respuestas enviadas por el servidor MCP
+- **Llamadas a herramientas**: Registra cada vez que se invoca una herramienta (con sus argumentos)
+- **Resultados de herramientas**: Registra los resultados devueltos por cada herramienta
+- **Errores**: Registra cualquier error que ocurra durante el procesamiento
+
+### Verificación de interacciones
+
+#### En desarrollo local
+
+Cuando ejecutas el servidor localmente, puedes verificar las interacciones de varias maneras:
+
+1. **Consola**: Los logs se muestran en la consola donde se ejecuta el servidor
+2. **Archivos de log**: Los logs se almacenan en el directorio `logs/` con rotación diaria
+3. **Endpoints de log**: En modo desarrollo, puedes acceder a los logs a través de:
+   - `GET /logs`: Lista todos los archivos de logs disponibles
+   - `GET /logs/:filename`: Muestra el contenido de un archivo de log específico
+
+#### En producción (Vercel)
+
+En un entorno de producción como Vercel, puedes verificar las interacciones mediante:
+
+1. **Archivos de log**: Los logs se almacenan en el directorio `logs/` del servidor
+2. **CLI de Vercel**: Puedes usar `vercel logs` para ver los logs en tiempo real
+3. **Log Drains**: Configura un Log Drain en Vercel para enviar los logs a un servicio externo
+
 ## Solución de problemas
 
 ### El agente no puede acceder al servidor MCP
 
 - Verifica que el servidor MCP esté en ejecución
 - Asegúrate de que la URL del servidor sea accesible desde Internet
-- Revisa los registros del servidor para identificar posibles errores
+- Revisa los logs del servidor para identificar posibles errores (usando los métodos descritos arriba)
 
 ### Error al consultar disponibilidad
 
 - Verifica que la clave API de Cal.com sea válida
 - Asegúrate de que el ID del tipo de evento sea correcto
 - Comprueba que el formato de las fechas sea correcto (YYYY-MM-DD)
+- Revisa los logs para ver la respuesta exacta de la API de Cal.com
 
 ### Error al programar reuniones
 
 - Verifica que todos los campos requeridos estén presentes
 - Asegúrate de que el formato de las horas sea correcto (ISO 8601)
 - Comprueba que el espacio de tiempo solicitado esté disponible
+- Consulta los logs para ver los detalles completos del error
 
 ## Recursos adicionales
 

@@ -106,6 +106,38 @@ El servidor se ejecutará en `http://localhost:3000` (o el puerto configurado en
 6. El agente puede utilizar `generate_speech` para proporcionar una confirmación verbal
 7. Opcionalmente, el agente puede utilizar `make_outbound_call` para realizar una llamada de confirmación
 
+## Sistema de Logs
+
+El servidor incluye un sistema de logs persistente que registra todas las interacciones MCP y llamadas a herramientas. Los logs se almacenan en archivos y también se muestran en la consola.
+
+### Características del sistema de logs
+
+- Rotación diaria de archivos de logs
+- Niveles de log configurables (error, warn, info, http, verbose, debug, silly)
+- Archivos separados para errores
+- Compresión automática de archivos antiguos
+- Retención configurable (por defecto 14 días)
+
+### Acceso a los logs
+
+#### En desarrollo local
+
+En modo desarrollo, puedes acceder a los logs a través de las siguientes rutas:
+
+- `GET /logs`: Lista todos los archivos de logs disponibles
+- `GET /logs/:filename`: Muestra el contenido de un archivo de log específico
+
+#### En producción
+
+En entorno de producción, los logs se almacenan en el directorio `logs/` del servidor. Para acceder a ellos en Vercel, puedes usar la CLI de Vercel o configurar un Log Drain para enviarlos a un servicio externo.
+
+### Configuración
+
+Puedes configurar el sistema de logs mediante las siguientes variables de entorno:
+
+- `NODE_ENV`: Establece el entorno (`development` o `production`)
+- `LOG_LEVEL`: Establece el nivel de detalle de los logs
+
 ## Estructura del proyecto
 
 ```
@@ -113,12 +145,15 @@ El servidor se ejecutará en `http://localhost:3000` (o el puerto configurado en
 ├── .env.example       # Plantilla para variables de entorno
 ├── package.json       # Dependencias y scripts
 ├── README.md          # Documentación
+├── logs/              # Directorio donde se almacenan los logs (creado automáticamente)
 └── src/
     ├── index.js       # Punto de entrada del servidor
     ├── mcp-server.js  # Implementación del servidor MCP
-    └── tools/         # Implementaciones de herramientas
-        ├── calcom.js  # Herramientas de Cal.com
-        └── elevenlabs.js # Herramientas de ElevenLabs
+    ├── tools/         # Implementaciones de herramientas
+    │   ├── calcom.js  # Herramientas de Cal.com
+    │   └── elevenlabs.js # Herramientas de ElevenLabs
+    └── utils/         # Utilidades
+        └── logger.js  # Sistema de logs
 ```
 
 ## Licencia

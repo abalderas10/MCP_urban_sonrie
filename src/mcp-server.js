@@ -1,5 +1,6 @@
 const { handleCalComTools } = require('./tools/calcom');
 const { handleElevenLabsTools } = require('./tools/elevenlabs');
+const { logger, logToolCall, logToolResult } = require('./utils/logger');
 
 // Definición de las herramientas disponibles en el servidor MCP
 const tools = [
@@ -107,20 +108,43 @@ async function handleMcpRequest(request) {
   if (request.type === 'tool_call') {
     const { tool_name, tool_args } = request;
     
-    // Determinar qué conjunto de herramientas manejar
-    if (tool_name.startsWith('get_available_slots') || tool_name.startsWith('book_meeting')) {
-      return await handleCalComTools(tool_name, tool_args);
-    } else if (
-      tool_name.startsWith('generate_speech') || 
-      tool_name.startsWith('list_voices') || 
-      tool_name.startsWith('create_voice_agent') || 
-      tool_name.startsWith('make_outbound_call')
-    ) {
-      return await handleElevenLabsTools(tool_name, tool_args);
-    } else {
+    // Registrar la llamada a la herramienta
+    logToolCall(tool_name, tool_args);
+    
+    try {
+      let result;
+      
+      // Determinar qué conjunto de herramientas manejar
+      if (tool_name.startsWith('get_available_slots') || tool_name.startsWith('book_meeting')) {
+        result = await handleCalComTools(tool_name, tool_args);
+      } else if (
+        tool_name.startsWith('generate_speech') || 
+        tool_name.startsWith('list_voices') || 
+        tool_name.startsWith('create_voice_agent') || 
+        tool_name.startsWith('make_outbound_call')
+      ) {
+        result = await handleElevenLabsTools(tool_name, tool_args);
+      } else {
+        result = {
+          type: 'tool_call_error',
+          error: `Herramienta desconocida: ${tool_name}`
+        };
+      }
+      
+      // Registrar el resultado de la herramienta
+      logToolResult(tool_name, result);
+      
+      return result;
+    } catch (error) {
+      logger.error(`Error en la ejecución de la herramienta ${tool_name}`, {
+        error: error.message,
+        stack: error.stack,
+        tool_args
+      });
+      
       return {
         type: 'tool_call_error',
-        error: `Herramienta desconocida: ${tool_name}`
+        error: error.message
       };
     }
   }
