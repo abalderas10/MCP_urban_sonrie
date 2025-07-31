@@ -57,8 +57,10 @@ En este caso, utilizamos MCP para permitir que los agentes conversacionales de E
    - Proporciona la siguiente información:
      - Nombre: "Cal.com Integration"
      - Descripción: "Servidor MCP para programar reuniones a través de Cal.com"
-     - URL del servidor: `http://tu-servidor:3000/mcp`
+     - URL del servidor: `https://tu-dominio-vercel.vercel.app/mcp` (usa la URL HTTPS proporcionada por Vercel)
      - Token secreto (opcional): Si has configurado autenticación adicional
+     
+   **IMPORTANTE**: ElevenLabs requiere que la URL del servidor MCP use HTTPS por razones de seguridad.
 
 3. **Configurar un agente conversacional**:
    - Crea un nuevo agente o edita uno existente
@@ -72,11 +74,18 @@ En este caso, utilizamos MCP para permitir que los agentes conversacionales de E
    - Ve a "Configuración" > "Desarrollador"
    - Haz clic en "Clave API"
    - Haz clic en "+ Añadir" para generar una nueva clave API
+   - Copia la clave API generada (formato: `cal_live_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX`)
 
 2. **Obtener el ID del tipo de evento**:
    - Ve a "Tipos de eventos"
    - Selecciona el tipo de evento que deseas utilizar para las reuniones
    - El ID del tipo de evento se encuentra en la URL (por ejemplo, `https://app.cal.com/event-types/123456`)
+
+3. **Configurar el dominio de Cal.com**:
+   - Identifica tu dominio de Cal.com (por ejemplo, `cal.com/tu-usuario`)
+   - **IMPORTANTE**: Al configurar la variable de entorno `CALCOM_DOMAIN`, asegúrate de incluir el protocolo `https://` al inicio
+   - Formato correcto: `https://cal.com/tu-usuario`
+   - Formato incorrecto: `cal.com/tu-usuario` (sin el protocolo)
 
 ## Ejemplos de uso
 

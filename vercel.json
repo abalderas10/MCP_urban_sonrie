@@ -13,6 +13,9 @@
     }
   ],
   "env": {
-    "NODE_ENV": "production"
+    "NODE_ENV": "production",
+    "ELEVENLABS_API_KEY": "${ELEVENLABS_API_KEY}",
+    "CALCOM_API_KEY": "${CALCOM_API_KEY}",
+    "CALCOM_DOMAIN": "${CALCOM_DOMAIN}"
   }
 }
