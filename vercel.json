@@ -14,6 +14,7 @@
   ],
   "env": {
     "NODE_ENV": "production",
+    "VERCEL": "1",
     "ELEVENLABS_API_KEY": "${ELEVENLABS_API_KEY}",
     "CALCOM_API_KEY": "${CALCOM_API_KEY}",
     "CALCOM_DOMAIN": "${CALCOM_DOMAIN}"
