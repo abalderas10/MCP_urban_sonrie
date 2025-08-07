@@ -8,10 +8,8 @@ ElevenLabs requiere que las conexiones a servidores MCP personalizados se realic
 
 ## Requisitos previos
 
-- OpenSSL instalado en tu sistema
-  - Windows: Descarga desde [https://slproweb.com/products/Win32OpenSSL.html](https://slproweb.com/products/Win32OpenSSL.html)
-  - macOS: `brew install openssl`
-  - Linux: `apt-get install openssl` o `yum install openssl`
+- Node.js 12.0.0 o superior
+- NPM para instalar las dependencias necesarias
 
 ## Pasos para configurar HTTPS
 

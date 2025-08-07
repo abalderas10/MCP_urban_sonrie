@@ -1,11 +1,12 @@
 /**
  * Script para configurar HTTPS en localhost
  * Este script genera certificados SSL autofirmados y configura el servidor para usar HTTPS
+ * Utiliza node-forge para generar los certificados sin depender de OpenSSL
  */
 
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
+const forge = require('node-forge');
 const chalk = require('chalk') || { green: (text) => text, yellow: (text) => text, red: (text) => text };
 
 // Directorio para almacenar los certificados
@@ -24,25 +25,69 @@ const certPath = path.join(certsDir, 'localhost.crt');
 // Generar certificados si no existen
 if (!fs.existsSync(keyPath) || !fs.existsSync(certPath)) {
   try {
-    console.log(chalk.yellow('Generando certificados SSL autofirmados...'));
+    console.log(chalk.yellow('Generando certificados SSL autofirmados con node-forge...'));
     
-    // Verificar si OpenSSL está instalado
-    try {
-      execSync('openssl version', { stdio: 'ignore' });
-    } catch (error) {
-      console.error(chalk.red('Error: OpenSSL no está instalado o no está en el PATH.'));
-      console.log(chalk.yellow('Por favor, instala OpenSSL y asegúrate de que esté en tu PATH.'));
-      console.log('Windows: https://slproweb.com/products/Win32OpenSSL.html');
-      console.log('macOS: brew install openssl');
-      console.log('Linux: apt-get install openssl o yum install openssl');
-      process.exit(1);
-    }
+    // Generar par de claves RSA
+    const keys = forge.pki.rsa.generateKeyPair(2048);
+    const privateKey = forge.pki.privateKeyToPem(keys.privateKey);
     
-    // Generar clave privada
-    execSync(`openssl genrsa -out "${keyPath}" 2048`);
+    // Crear certificado
+    const cert = forge.pki.createCertificate();
+    cert.publicKey = keys.publicKey;
     
-    // Generar certificado autofirmado
-    execSync(`openssl req -new -x509 -key "${keyPath}" -out "${certPath}" -days 365 -subj "/CN=localhost" -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"`);
+    // Configurar atributos del certificado
+    cert.serialNumber = '01' + Math.floor(Math.random() * 100000000).toString();
+    cert.validity.notBefore = new Date();
+    cert.validity.notAfter = new Date();
+    cert.validity.notAfter.setFullYear(cert.validity.notBefore.getFullYear() + 1); // Válido por 1 año
+    
+    // Atributos del sujeto y emisor
+    const attrs = [
+      { name: 'commonName', value: 'localhost' },
+      { name: 'organizationName', value: 'MCP Server Development' },
+      { name: 'organizationalUnitName', value: 'Development' },
+      { name: 'localityName', value: 'Local' },
+      { name: 'countryName', value: 'ES' }
+    ];
+    
+    cert.setSubject(attrs);
+    cert.setIssuer(attrs); // Auto-firmado, el emisor es el mismo que el sujeto
+    
+    // Extensiones del certificado
+    cert.setExtensions([
+      {
+        name: 'basicConstraints',
+        cA: false
+      },
+      {
+        name: 'keyUsage',
+        digitalSignature: true,
+        keyEncipherment: true,
+        dataEncipherment: true
+      },
+      {
+        name: 'extKeyUsage',
+        serverAuth: true,
+        clientAuth: true
+      },
+      {
+        name: 'subjectAltName',
+        altNames: [
+          { type: 2, value: 'localhost' }, // DNS
+          { type: 7, ip: '127.0.0.1' }      // IP
+        ]
+      }
+    ]);
+    
+    // Firmar el certificado con la clave privada
+    cert.sign(keys.privateKey, forge.md.sha256.create());
+    
+    // Convertir a PEM
+    const certPem = forge.pki.certificateToPem(cert);
+    
+    // Guardar archivos
+    fs.writeFileSync(keyPath, privateKey);
+    fs.writeFileSync(certPath, certPem);
     
     console.log(chalk.green('✓ Certificados SSL generados correctamente'));
   } catch (error) {
