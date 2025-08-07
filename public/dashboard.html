@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MCP - Dashboard de Logs</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f8f9fa;
+      padding-top: 20px;
+    }
+    .navbar-brand {
+      font-weight: bold;
+    }
+    .card {
+      margin-bottom: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .card-header {
+      font-weight: bold;
+      border-radius: 10px 10px 0 0 !important;
+    }
+    .stat-card {
+      text-align: center;
+      padding: 15px;
+    }
+    .stat-value {
+      font-size: 2rem;
+      font-weight: bold;
+    }
+    .stat-label {
+      font-size: 0.9rem;
+      color: #6c757d;
+    }
+    .log-entry {
+      padding: 10px;
+      border-bottom: 1px solid #e9ecef;
+    }
+    .log-entry:last-child {
+      border-bottom: none;
+    }
+    .log-timestamp {
+      font-size: 0.8rem;
+      color: #6c757d;
+    }
+    .log-level {
+      font-weight: bold;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+    }
+    .log-level-error {
+      background-color: #f8d7da;
+      color: #842029;
+    }
+    .log-level-warn {
+      background-color: #fff3cd;
+      color: #664d03;
+    }
+    .log-level-info {
+      background-color: #cfe2ff;
+      color: #084298;
+    }
+    .log-message {
+      margin-top: 5px;
+    }
+    .log-metadata {
+      background-color: #f8f9fa;
+      padding: 8px;
+      border-radius: 4px;
+      margin-top: 5px;
+      font-family: monospace;
+      font-size: 0.9rem;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .log-raw {
+      font-family: monospace;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .refresh-btn {
+      cursor: pointer;
+    }
+    .auto-refresh-toggle {
+      cursor: pointer;
+    }
+    #logContent {
+      max-height: 600px;
+      overflow-y: auto;
+    }
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: #6c757d;
+    }
+    .error-message {
+      color: #842029;
+      background-color: #f8d7da;
+      padding: 10px;
+      border-radius: 4px;
+      margin-bottom: 10px;
+    }
+    .file-size {
+      font-size: 0.8rem;
+      color: #6c757d;
+    }
+    .file-date {
+      font-size: 0.8rem;
+      color: #6c757d;
+    }
+    .log-file-item {
+      cursor: pointer;
+      padding: 8px 15px;
+      border-radius: 4px;
+      transition: background-color 0.2s;
+    }
+    .log-file-item:hover {
+      background-color: #e9ecef;
+    }
+    .log-file-item.active {
+      background-color: #cfe2ff;
+      font-weight: bold;
+    }
+    .chart-container {
+      height: 300px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4 rounded">
+      <div class="container-fluid">
+        <a class="navbar-brand" href="#">
+          <i class="bi bi-bar-chart-line"></i> MCP - Dashboard de Logs
+        </a>
+        <div class="d-flex align-items-center">
+          <div class="form-check form-switch me-3">
+            <input class="form-check-input" type="checkbox" id="autoRefreshToggle">
+            <label class="form-check-label text-light" for="autoRefreshToggle">Auto-refresh</label>
+          </div>
+          <button id="refreshBtn" class="btn btn-outline-light btn-sm">
+            <i class="bi bi-arrow-clockwise"></i> Actualizar
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <div class="row">
+      <!-- Panel de estadísticas -->
+      <div class="col-md-12">
+        <div class="card">
+          <div class="card-header bg-primary text-white">
+            <i class="bi bi-graph-up"></i> Estadísticas de Logs
+          </div>
+          <div class="card-body">
+            <div class="row" id="statsContainer">
+              <div class="col-md-2">
+                <div class="stat-card">
+                  <div class="stat-value text-danger" id="errorCount">-</div>
+                  <div class="stat-label">Errores</div>
+                </div>
+              </div>
+              <div class="col-md-2">
+                <div class="stat-card">
+                  <div class="stat-value text-warning" id="warningCount">-</div>
+                  <div class="stat-label">Advertencias</div>
+                </div>
+              </div>
+              <div class="col-md-2">
+                <div class="stat-card">
+                  <div class="stat-value text-info" id="infoCount">-</div>
+                  <div class="stat-label">Info</div>
+                </div>
+              </div>
+              <div class="col-md-2">
+                <div class="stat-card">
+                  <div class="stat-value text-primary" id="discoveryCount">-</div>
+                  <div class="stat-label">Solicitudes Discovery</div>
+                </div>
+              </div>
+              <div class="col-md-2">
+                <div class="stat-card">
+                  <div class="stat-value text-success" id="toolCallCount">-</div>
+                  <div class="stat-label">Solicitudes Tool Call</div>
+                </div>
+              </div>
+              <div class="col-md-2">
+                <div class="stat-card">
+                  <div class="stat-value text-dark" id="totalRequestCount">-</div>
+                  <div class="stat-label">Total Solicitudes</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <!-- Lista de archivos de log -->
+      <div class="col-md-3">
+        <div class="card">
+          <div class="card-header bg-secondary text-white">
+            <i class="bi bi-file-earmark-text"></i> Archivos de Log
+          </div>
+          <div class="card-body p-0">
+            <div class="list-group list-group-flush" id="logFilesList">
+              <div class="loading">
+                <i class="bi bi-hourglass"></i> Cargando archivos...
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Contenido del log seleccionado -->
+      <div class="col-md-9">
+        <div class="card">
+          <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+            <div>
+              <i class="bi bi-file-text"></i> <span id="currentLogTitle">Seleccione un archivo</span>
+            </div>
+            <div>
+              <button id="downloadLogBtn" class="btn btn-sm btn-outline-light" disabled>
+                <i class="bi bi-download"></i> Descargar
+              </button>
+            </div>
+          </div>
+          <div class="card-body">
+            <div id="logContent">
+              <div class="text-center text-muted">
+                <i class="bi bi-arrow-left-circle fs-1"></i>
+                <p>Seleccione un archivo de log para ver su contenido</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Variables globales
+    let currentLogFile = null;
+    let autoRefreshInterval = null;
+    const AUTO_REFRESH_INTERVAL = 10000; // 10 segundos
+
+    // Elementos DOM
+    const logFilesList = document.getElementById('logFilesList');
+    const logContent = document.getElementById('logContent');
+    const currentLogTitle = document.getElementById('currentLogTitle');
+    const downloadLogBtn = document.getElementById('downloadLogBtn');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const autoRefreshToggle = document.getElementById('autoRefreshToggle');
+    const errorCount = document.getElementById('errorCount');
+    const warningCount = document.getElementById('warningCount');
+    const infoCount = document.getElementById('infoCount');
+    const discoveryCount = document.getElementById('discoveryCount');
+    const toolCallCount = document.getElementById('toolCallCount');
+    const totalRequestCount = document.getElementById('totalRequestCount');
+
+    // Función para formatear el tamaño de archivo
+    function formatFileSize(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+      else return (bytes / 1048576).toFixed(1) + ' MB';
+    }
+
+    // Función para formatear la fecha
+    function formatDate(dateString) {
+      const date = new Date(dateString);
+      return date.toLocaleString();
+    }
+
+    // Cargar la lista de archivos de log
+    async function loadLogFiles() {
+      try {
+        const response = await fetch('/api/logs');
+        const data = await response.json();
+        
+        if (data.error) {
+          logFilesList.innerHTML = `<div class="error-message">${data.error}</div>`;
+          return;
+        }
+        
+        if (data.logFiles.length === 0) {
+          logFilesList.innerHTML = `<div class="text-center text-muted p-3">No hay archivos de log disponibles</div>`;
+          return;
+        }
+        
+        logFilesList.innerHTML = '';
+        data.logFiles.forEach(file => {
+          const fileItem = document.createElement('div');
+          fileItem.className = 'log-file-item';
+          fileItem.dataset.filename = file.filename;
+          fileItem.innerHTML = `
+            <div><strong>${file.filename}</strong></div>
+            <div class="file-size">${formatFileSize(file.size)}</div>
+            <div class="file-date">Modificado: ${formatDate(file.modified)}</div>
+          `;
+          fileItem.addEventListener('click', () => loadLogContent(file.filename));
+          logFilesList.appendChild(fileItem);
+        });
+        
+        // Si hay un archivo seleccionado, mantenerlo seleccionado
+        if (currentLogFile) {
+          const selectedItem = logFilesList.querySelector(`[data-filename="${currentLogFile}"]`);
+          if (selectedItem) {
+            selectedItem.classList.add('active');
+          }
+        }
+      } catch (error) {
+        logFilesList.innerHTML = `<div class="error-message">Error al cargar archivos: ${error.message}</div>`;
+      }
+    }
+
+    // Cargar el contenido de un archivo de log
+    async function loadLogContent(filename) {
+      currentLogFile = filename;
+      currentLogTitle.textContent = filename;
+      downloadLogBtn.disabled = false;
+      
+      // Actualizar la selección visual
+      const items = logFilesList.querySelectorAll('.log-file-item');
+      items.forEach(item => item.classList.remove('active'));
+      const selectedItem = logFilesList.querySelector(`[data-filename="${filename}"]`);
+      if (selectedItem) {
+        selectedItem.classList.add('active');
+      }
+      
+      logContent.innerHTML = `<div class="loading"><i class="bi bi-hourglass"></i> Cargando contenido...</div>`;
+      
+      try {
+        const response = await fetch(`/api/logs/${filename}`);
+        const data = await response.json();
+        
+        if (data.error) {
+          logContent.innerHTML = `<div class="error-message">${data.error}</div>`;
+          return;
+        }
+        
+        if (!data.logs || data.logs.length === 0) {
+          logContent.innerHTML = `<div class="text-center text-muted">El archivo está vacío</div>`;
+          return;
+        }
+        
+        logContent.innerHTML = '';
+        data.logs.forEach(log => {
+          const logEntry = document.createElement('div');
+          logEntry.className = 'log-entry';
+          
+          if (log.raw) {
+            // Línea de log sin formato estructurado
+            logEntry.innerHTML = `<div class="log-raw">${log.raw}</div>`;
+          } else {
+            // Línea de log estructurada
+            let levelClass = '';
+            switch (log.level?.toLowerCase()) {
+              case 'error': levelClass = 'log-level-error'; break;
+              case 'warn': levelClass = 'log-level-warn'; break;
+              case 'info': levelClass = 'log-level-info'; break;
+              default: levelClass = 'log-level-info';
+            }
+            
+            logEntry.innerHTML = `
+              <div class="d-flex justify-content-between">
+                <span class="log-timestamp">${log.timestamp || ''}</span>
+                ${log.level ? `<span class="log-level ${levelClass}">${log.level}</span>` : ''}
+              </div>
+              <div class="log-message">${log.message || ''}</div>
+            `;
+            
+            // Añadir metadatos si existen
+            if (log.metadata && Object.keys(log.metadata).length > 0) {
+              const metadataEl = document.createElement('div');
+              metadataEl.className = 'log-metadata';
+              metadataEl.textContent = JSON.stringify(log.metadata, null, 2);
+              logEntry.appendChild(metadataEl);
+            }
+          }
+          
+          logContent.appendChild(logEntry);
+        });
+        
+        // Desplazar al final del contenido
+        logContent.scrollTop = logContent.scrollHeight;
+      } catch (error) {
+        logContent.innerHTML = `<div class="error-message">Error al cargar contenido: ${error.message}</div>`;
+      }
+    }
+
+    // Cargar estadísticas de logs
+    async function loadStats() {
+      try {
+        const response = await fetch('/api/stats');
+        const data = await response.json();
+        
+        if (data.error) {
+          console.error('Error al cargar estadísticas:', data.error);
+          return;
+        }
+        
+        const stats = data.stats;
+        errorCount.textContent = stats.errors;
+        warningCount.textContent = stats.warnings;
+        infoCount.textContent = stats.info;
+        discoveryCount.textContent = stats.discoveryRequests;
+        toolCallCount.textContent = stats.toolCallRequests;
+        totalRequestCount.textContent = stats.totalRequests;
+      } catch (error) {
+        console.error('Error al cargar estadísticas:', error);
+      }
+    }
+
+    // Función para descargar el archivo de log actual
+    function downloadCurrentLog() {
+      if (!currentLogFile) return;
+      
+      fetch(`/logs/${currentLogFile}`)
+        .then(response => response.text())
+        .then(content => {
+          const blob = new Blob([content], { type: 'text/plain' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = currentLogFile;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        })
+        .catch(error => {
+          console.error('Error al descargar el archivo:', error);
+          alert('Error al descargar el archivo: ' + error.message);
+        });
+    }
+
+    // Función para refrescar todos los datos
+    function refreshData() {
+      loadLogFiles();
+      loadStats();
+      if (currentLogFile) {
+        loadLogContent(currentLogFile);
+      }
+    }
+
+    // Configurar auto-refresh
+    function toggleAutoRefresh() {
+      if (autoRefreshToggle.checked) {
+        autoRefreshInterval = setInterval(refreshData, AUTO_REFRESH_INTERVAL);
+      } else {
+        clearInterval(autoRefreshInterval);
+      }
+    }
+
+    // Event listeners
+    refreshBtn.addEventListener('click', refreshData);
+    downloadLogBtn.addEventListener('click', downloadCurrentLog);
+    autoRefreshToggle.addEventListener('change', toggleAutoRefresh);
+
+    // Inicialización
+    document.addEventListener('DOMContentLoaded', () => {
+      loadLogFiles();
+      loadStats();
+    });
+  </script>
+</body>
+</html>

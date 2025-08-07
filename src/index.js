@@ -3,6 +3,8 @@ const express = require('express');
 const cors = require('cors');
 const { handleMcpRequest } = require('./mcp-server');
 const { logger, logMcpRequest, logMcpResponse, logMcpError } = require('./utils/logger');
+const { logCriticalError, startMemoryMonitoring, monitorApiResponseTime } = require('./utils/alerts');
+const { setupLogDashboard } = require('./utils/log-dashboard');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -10,16 +12,27 @@ const PORT = process.env.PORT || 3000;
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(express.static('public'));
 
 // Ruta principal para el servidor MCP
 app.post('/mcp', async (req, res) => {
+  const startTime = Date.now();
   try {
     logMcpRequest(req.body);
     const response = await handleMcpRequest(req.body);
     logMcpResponse(response);
+    
+    // Monitorear tiempo de respuesta
+    const responseTime = Date.now() - startTime;
+    monitorApiResponseTime('MCP Request', responseTime);
+    
     res.json(response);
   } catch (error) {
     logMcpError(error, req.body);
+    // Registrar como error crítico si es un error grave
+    if (error.status >= 500 || error.message.includes('API key') || error.message.includes('timeout')) {
+      logCriticalError(error, req.body);
+    }
     console.error('Error handling MCP request:', error);
     res.status(500).json({
       error: 'Internal server error',
@@ -40,10 +53,14 @@ app.get('/', (req, res) => {
     description: 'Servidor MCP para integrar ElevenLabs con Cal.com',
     endpoints: [
       { path: '/mcp', method: 'POST', description: 'Endpoint principal del MCP' },
-      { path: '/health', method: 'GET', description: 'Verificación de estado del servidor' }
+      { path: '/health', method: 'GET', description: 'Verificación de estado del servidor' },
+      { path: '/dashboard', method: 'GET', description: 'Dashboard de visualización de logs' }
     ]
   });
 });
+
+// Configurar el dashboard de logs
+setupLogDashboard(app);
 
 // Ruta para acceder a los logs (solo en desarrollo)
 if (process.env.NODE_ENV !== 'production') {
@@ -77,4 +94,7 @@ if (process.env.NODE_ENV !== 'production') {
 app.listen(PORT, () => {
   logger.info(`Servidor MCP ejecutándose en http://localhost:${PORT}`);
   console.log(`Servidor MCP ejecutándose en http://localhost:${PORT}`);
+  
+  // Iniciar monitoreo de memoria
+  startMemoryMonitoring();
 });

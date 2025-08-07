@@ -69,7 +69,21 @@ const logMcpResponse = (response) => {
 
 // Función para registrar errores MCP
 const logMcpError = (error, request) => {
-  logger.error('MCP Error', { error: error.message, stack: error.stack, request });
+  logger.error('Error en solicitud MCP', {
+    error: error.message,
+    stack: error.stack,
+    request
+  });
+  
+  // Añadir información adicional para facilitar el diagnóstico
+  if (request && request.type === 'tool_call') {
+    logger.error('Detalles adicionales del error en tool_call', {
+      tool_name: request.tool_name,
+      tool_args: JSON.stringify(request.tool_args),
+      error_type: error.name || 'Unknown',
+      timestamp: new Date().toISOString()
+    });
+  }
 };
 
 // Función para registrar llamadas a herramientas
