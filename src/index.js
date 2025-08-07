@@ -1,6 +1,10 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const fs = require('fs');
+const path = require('path');
+const http = require('http');
+const https = require('https');
 const { handleMcpRequest } = require('./mcp-server');
 const { logger, logMcpRequest, logMcpResponse, logMcpError } = require('./utils/logger');
 const { logCriticalError, startMemoryMonitoring, monitorApiResponseTime } = require('./utils/alerts');
@@ -109,11 +113,49 @@ if (process.env.NODE_ENV === 'production' && process.env.VERCEL === '1') {
   // No iniciamos monitoreo de memoria en Vercel
 } else {
   // Iniciar el servidor en entorno local
-  app.listen(PORT, () => {
-    logger.info(`Servidor MCP ejecutándose en http://localhost:${PORT}`);
-    console.log(`Servidor MCP ejecutándose en http://localhost:${PORT}`);
+  const useHttps = process.env.USE_HTTPS === 'true';
+  
+  if (useHttps) {
+    // Cargar certificados SSL
+    let sslOptions;
+    try {
+      const certsDir = path.join(__dirname, '..', 'certs');
+      sslOptions = {
+        key: fs.readFileSync(path.join(certsDir, 'localhost.key')),
+        cert: fs.readFileSync(path.join(certsDir, 'localhost.crt'))
+      };
+    } catch (error) {
+      console.error('Error al cargar certificados SSL:', error.message);
+      console.log('Ejecuta primero "node setup-https.js" para generar los certificados');
+      process.exit(1);
+    }
     
-    // Iniciar monitoreo de memoria
-    startMemoryMonitoring();
-  });
+    // Crear servidor HTTPS
+    https.createServer(sslOptions, app).listen(PORT, () => {
+      logger.info(`Servidor MCP ejecutándose en https://localhost:${PORT}`);
+      console.log(`Servidor MCP ejecutándose en https://localhost:${PORT}`);
+      console.log('IMPORTANTE: Si es la primera vez que usas HTTPS, abre la URL en el navegador y acepta el certificado');
+      
+      // Iniciar monitoreo de memoria
+      startMemoryMonitoring();
+    });
+    
+    // También crear un servidor HTTP que redirija a HTTPS
+    http.createServer((req, res) => {
+      res.writeHead(301, { "Location": `https://localhost:${PORT}${req.url}` });
+      res.end();
+    }).listen(PORT - 1, () => {
+      console.log(`Redireccionamiento HTTP → HTTPS configurado en el puerto ${PORT - 1}`);
+    });
+  } else {
+    // Servidor HTTP normal
+    app.listen(PORT, () => {
+      logger.info(`Servidor MCP ejecutándose en http://localhost:${PORT}`);
+      console.log(`Servidor MCP ejecutándose en http://localhost:${PORT}`);
+      console.log('NOTA: Para usar HTTPS, configura USE_HTTPS=true en el archivo .env');
+      
+      // Iniciar monitoreo de memoria
+      startMemoryMonitoring();
+    });
+  }
 }
