@@ -59,35 +59,63 @@ async function generateSpeech(args) {
       }
     };
 
-    // Realizar solicitud a la API de ElevenLabs
-    const response = await axios.post(
-      `https://api.elevenlabs.io/v1/text-to-speech/${voice_id}`,
-      requestData,
-      {
-        headers: {
-          'xi-api-key': process.env.ELEVENLABS_API_KEY,
-          'Content-Type': 'application/json',
-          'Accept': 'audio/mpeg'
-        },
-        responseType: 'arraybuffer'
-      }
-    );
-
-    // En un caso real, aquí guardaríamos el audio y devolveríamos una URL
-    // Para este ejemplo, simplemente indicamos que se generó correctamente
-    return {
-      type: 'tool_call_response',
-      content: [
+    // En entorno serverless (Vercel), usamos la API de streaming de ElevenLabs
+    // en lugar de descargar todo el audio
+    if (process.env.NODE_ENV === 'production') {
+      // Obtener un stream URL de ElevenLabs en lugar del audio completo
+      const streamResponse = await axios.post(
+        `https://api.elevenlabs.io/v1/text-to-speech/${voice_id}/stream`,
+        requestData,
         {
-          type: 'text',
-          text: JSON.stringify({
-            message: 'Audio generado exitosamente',
-            format: 'audio/mpeg',
-            size_bytes: response.data.length
-          })
+          headers: {
+            'xi-api-key': process.env.ELEVENLABS_API_KEY,
+            'Content-Type': 'application/json'
+          }
         }
-      ]
-    };
+      );
+      
+      return {
+        type: 'tool_call_response',
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              message: 'Audio generado exitosamente',
+              format: 'audio/mpeg',
+              stream_url: `https://api.elevenlabs.io/v1/text-to-speech/${voice_id}/stream/audio?optimize_streaming_latency=3`
+            })
+          }
+        ]
+      };
+    } else {
+      // En desarrollo, seguimos usando el método original
+      const response = await axios.post(
+        `https://api.elevenlabs.io/v1/text-to-speech/${voice_id}`,
+        requestData,
+        {
+          headers: {
+            'xi-api-key': process.env.ELEVENLABS_API_KEY,
+            'Content-Type': 'application/json',
+            'Accept': 'audio/mpeg'
+          },
+          responseType: 'arraybuffer'
+        }
+      );
+
+      return {
+        type: 'tool_call_response',
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              message: 'Audio generado exitosamente',
+              format: 'audio/mpeg',
+              size_bytes: response.data.length
+            })
+          }
+        ]
+      };
+    }
   } catch (error) {
     console.error('Error al generar voz:', error);
     return {

@@ -97,7 +97,16 @@ const logCriticalError = (error, request = {}) => {
 /**
  * Monitorea el uso de memoria y envía alertas si es necesario
  */
+/**
+ * Monitorea el uso de memoria (solo en entorno no serverless)
+ */
 const startMemoryMonitoring = () => {
+  // No ejecutar monitoreo de memoria en entorno serverless (Vercel)
+  if (process.env.NODE_ENV === 'production' && process.env.VERCEL === '1') {
+    logger.info('Monitoreo de memoria desactivado en entorno serverless');
+    return;
+  }
+  
   const MEMORY_CHECK_INTERVAL = process.env.MEMORY_CHECK_INTERVAL || 60000; // 1 minuto
   const MEMORY_THRESHOLD_MB = process.env.MEMORY_THRESHOLD_MB || 500; // 500 MB
   

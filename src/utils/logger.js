@@ -5,10 +5,13 @@ const path = require('path');
 const fs = require('fs');
 require('winston-daily-rotate-file');
 
-// Asegurarse de que el directorio de logs exista
-const logsDir = path.join(process.cwd(), 'logs');
-if (!fs.existsSync(logsDir)) {
-  fs.mkdirSync(logsDir, { recursive: true });
+// Asegurarse de que el directorio de logs exista solo en desarrollo
+let logsDir = '';
+if (process.env.NODE_ENV !== 'production') {
+  logsDir = path.join(process.cwd(), 'logs');
+  if (!fs.existsSync(logsDir)) {
+    fs.mkdirSync(logsDir, { recursive: true });
+  }
 }
 
 // Formato personalizado para los logs
@@ -20,15 +23,18 @@ const logFormat = printf(({ level, message, timestamp, ...metadata }) => {
   return `${timestamp} [${level}]: ${message} ${metaStr}`;
 });
 
-// Configuración de transporte para archivos rotados diariamente
-const fileRotateTransport = new transports.DailyRotateFile({
-  filename: path.join(logsDir, 'mcp-%DATE%.log'),
-  datePattern: 'YYYY-MM-DD',
-  maxFiles: '14d', // Mantener logs por 14 días
-  maxSize: '20m', // Tamaño máximo de cada archivo
-  zippedArchive: true,
-  level: 'info'
-});
+// Configuración de transporte para archivos rotados diariamente (solo en desarrollo)
+let fileRotateTransport = null;
+if (process.env.NODE_ENV !== 'production') {
+  fileRotateTransport = new transports.DailyRotateFile({
+    filename: path.join(logsDir, 'mcp-%DATE%.log'),
+    datePattern: 'YYYY-MM-DD',
+    maxFiles: '14d', // Mantener logs por 14 días
+    maxSize: '20m', // Tamaño máximo de cada archivo
+    zippedArchive: true,
+    level: 'info'
+  });
+}
 
 // Crear el logger con múltiples transportes
 const logger = createLogger({
@@ -38,7 +44,7 @@ const logger = createLogger({
     logFormat
   ),
   transports: [
-    // Escribir en consola
+    // Escribir en consola siempre
     new transports.Console({
       format: combine(
         colorize(),
@@ -46,13 +52,16 @@ const logger = createLogger({
         logFormat
       )
     }),
-    // Escribir en archivos rotados
-    fileRotateTransport,
-    // Archivo separado para errores
-    new transports.File({ 
-      filename: path.join(logsDir, 'error.log'), 
-      level: 'error' 
-    })
+    // Añadir transportes de archivo solo en desarrollo
+    ...(process.env.NODE_ENV !== 'production' ? [
+      // Escribir en archivos rotados
+      fileRotateTransport,
+      // Archivo separado para errores
+      new transports.File({ 
+        filename: path.join(logsDir, 'error.log'), 
+        level: 'error' 
+      })
+    ] : [])
   ],
   exitOnError: false
 });

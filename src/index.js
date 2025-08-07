@@ -88,13 +88,32 @@ if (process.env.NODE_ENV !== 'production') {
     const logContent = fs.readFileSync(logPath, 'utf8');
     res.type('text/plain').send(logContent);
   });
+} else {
+  // En producción, mostrar mensaje informativo
+  app.get('/logs', (req, res) => {
+    res.status(403).json({ error: 'Los logs no están disponibles en producción' });
+  });
+  
+  app.get('/logs/:filename', (req, res) => {
+    res.status(403).json({ error: 'Los logs no están disponibles en producción' });
+  });
 }
 
 // Iniciar el servidor
-app.listen(PORT, () => {
-  logger.info(`Servidor MCP ejecutándose en http://localhost:${PORT}`);
-  console.log(`Servidor MCP ejecutándose en http://localhost:${PORT}`);
+if (process.env.NODE_ENV === 'production' && process.env.VERCEL === '1') {
+  // En Vercel, no necesitamos iniciar el servidor explícitamente
+  // ya que Vercel maneja esto automáticamente
+  logger.info('Servidor MCP ejecutándose en Vercel');
+  console.log('Servidor MCP ejecutándose en Vercel');
   
-  // Iniciar monitoreo de memoria
-  startMemoryMonitoring();
-});
+  // No iniciamos monitoreo de memoria en Vercel
+} else {
+  // Iniciar el servidor en entorno local
+  app.listen(PORT, () => {
+    logger.info(`Servidor MCP ejecutándose en http://localhost:${PORT}`);
+    console.log(`Servidor MCP ejecutándose en http://localhost:${PORT}`);
+    
+    // Iniciar monitoreo de memoria
+    startMemoryMonitoring();
+  });
+}
